@@ -52,10 +52,15 @@ func getSigningKey(expired bool) (*DBKey, error) {
 	}
 
 	var kid int64
-	var pemData []byte
+	var encData string
 	var exp int64
 
-	if err := row.Scan(&kid, &pemData, &exp); err != nil {
+	if err := row.Scan(&kid, &encData, &exp); err != nil {
+		return nil, err
+	}
+
+	pemData, err := decrypt(encData)
+	if err != nil {
 		return nil, err
 	}
 
@@ -93,10 +98,15 @@ func getValidPublicKeys() ([]DBKey, error) {
 
 	for rows.Next() {
 		var kid int64
-		var pemData []byte
+		var encData string
 		var exp int64
 
-		if err := rows.Scan(&kid, &pemData, &exp); err != nil {
+		if err := rows.Scan(&kid, &encData, &exp); err != nil {
+			return nil, err
+		}
+
+		pemData, err := decrypt(encData)
+		if err != nil {
 			return nil, err
 		}
 

@@ -24,6 +24,23 @@ func initDB() {
 		kid INTEGER PRIMARY KEY AUTOINCREMENT,
 		key BLOB NOT NULL,
 		exp INTEGER NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS users(
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password_hash TEXT NOT NULL,
+		email TEXT UNIQUE,
+		date_registered TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		last_login TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS auth_logs(
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		request_ip TEXT NOT NULL,
+		request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		user_id INTEGER,
+		FOREIGN KEY(user_id) REFERENCES users(id)
 	);`
 
 	_, err = db.Exec(createTable)
@@ -31,6 +48,7 @@ func initDB() {
 		log.Fatal(err)
 	}
 }
+
 func saveKeyToDB(db *sql.DB, privateKey *rsa.PrivateKey, exp int64) error {
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 
@@ -41,14 +59,20 @@ func saveKeyToDB(db *sql.DB, privateKey *rsa.PrivateKey, exp int64) error {
 
 	pemData := pem.EncodeToMemory(pemBlock)
 
-	_, err := db.Exec(
+	encrypted, err := encrypt(pemData)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(
 		"INSERT INTO keys(key, exp) VALUES(?, ?)",
-		pemData,
+		encrypted,
 		exp,
 	)
 
 	return err
 }
+
 func seedKeys() {
 	db, err := sql.Open("sqlite3", "totally_not_my_privateKeys.db")
 	if err != nil {
@@ -87,6 +111,7 @@ func seedKeys() {
 		log.Fatal(err)
 	}
 }
+
 func setupServer() (*Server, error) {
 	initDB()
 	seedKeys()
@@ -98,5 +123,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Fatal(srv.Run(":8080"))
 }

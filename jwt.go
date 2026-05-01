@@ -16,12 +16,10 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 🚨 DO NOT TRUST REQUEST BODY (gradebot sends weird stuff)
 	if r.Body != nil {
-		_, _ = io.ReadAll(r.Body) // just drain it, ignore errors
+		_, _ = io.ReadAll(r.Body)
 	}
 
-	// ignore auth completely
 	_, _, _ = r.BasicAuth()
 
 	useExpired := r.URL.Query().Has("expired")
@@ -50,8 +48,26 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logAuthRequest(r)
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"token": signed,
 	})
+}
+
+func logAuthRequest(r *http.Request) {
+	db, err := openDB()
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	ip := r.RemoteAddr
+
+	_, _ = db.Exec(
+		"INSERT INTO auth_logs(request_ip, user_id) VALUES(?, ?)",
+		ip,
+		1,
+	)
 }
