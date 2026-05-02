@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -55,7 +56,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	password, err := randomString(24)
+	password := uuid.New().String()
 	if err != nil {
 		http.Error(w, "Could not generate password", http.StatusInternalServerError)
 		return
