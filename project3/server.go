@@ -25,3 +25,9 @@ func (s *Server) Run(addr string) error {
 	log.Printf("Listening on %s", addr)
 	return http.ListenAndServe(addr, s.routes())
 }
+
+func (s *Server) handleJWKS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"keys":[]}`))
+}
